@@ -1,0 +1,53 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - strappsaldana
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ctrdash.azurecr.io/
+          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_0C2CD3128C7B40998C388F61999D6766 }}
+          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_42561135DD794738A944DE4808B2EE80 }}
+
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: ctrdash.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_0C2CD3128C7B40998C388F61999D6766 }}/strappdash:${{ github.sha }}
+          file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    
+    needs: build
+    
+    steps:
+      
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'strappsaldana'
+          slot-name: 'Production'
+          images: 'ctrdash.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_0C2CD3128C7B40998C388F61999D6766 }}/strappdash:${{ github.sha }}'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D0D20662F91C4F73ADF74B6F0CEA8603 }}
